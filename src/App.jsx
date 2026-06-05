@@ -1436,6 +1436,7 @@ function WorkoutProgram({ user, programs, setPrograms, sessions, setSessions }) 
   const [currentSession, setCurrentSession] = useState(null); // séance en cours
   const [restTimer, setRestTimer] = useState(null);
   const [restLeft, setRestLeft] = useState(0);
+  const [weightUnit, setWeightUnit] = useState("kg");
   const timerRef = useRef(null);
 
   // Timer de repos
@@ -1716,7 +1717,19 @@ const finishSession = async () => {
           <p style={{ margin: 0, fontSize: 13, color: T.tertiary, fontFamily: F.text }}>Seance en cours</p>
           <p style={{ margin: "2px 0 0", fontSize: 20, fontWeight: 800, color: T.primary, fontFamily: F.display }}>{currentSession.progName}</p>
         </div>
-        <button onClick={finishSession} style={{ ...btnPrimary(T.accent), padding: "9px 16px", fontSize: 13 }}>Terminer ✓</button>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{ display: "flex", background: T.bgInput, borderRadius: R.sm, padding: 2, gap: 2 }}>
+            {["kg", "lbs"].map(u => (
+              <button key={u} onClick={() => setWeightUnit(u)}
+                style={{ padding: "5px 10px", borderRadius: R.sm, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 700, fontFamily: F.text,
+                  background: weightUnit === u ? T.blue : "transparent",
+                  color: weightUnit === u ? "#fff" : T.tertiary }}>
+                {u}
+              </button>
+            ))}
+          </div>
+          <button onClick={finishSession} style={{ ...btnPrimary(T.accent), padding: "9px 16px", fontSize: 13 }}>Terminer ✓</button>
+        </div>
       </div>
 
       {/* Timer repos */}
@@ -1752,7 +1765,12 @@ const finishSession = async () => {
                     style={{ ...inputStyle, fontSize: 13, padding: "7px 8px", textAlign: "center",
                       background: st.done ? T.accentSoft : T.bgInput,
                       border: st.done ? `1px solid ${T.accent}40` : "none" }} />
-                  <input type="number" step="0.5" placeholder="kg" value={st.weight || ""} onChange={e => updateSet(ei, si, "weight", e.target.value === "" ? "" : e.target.value)}
+                  <input type="number" step="0.5" placeholder={weightUnit}
+                    value={st.weight === "" || st.weight === undefined ? "" : weightUnit === "lbs" ? Math.round(+st.weight * 2.20462 * 10) / 10 : st.weight}
+                    onChange={e => {
+                      const val = e.target.value === "" ? "" : weightUnit === "lbs" ? Math.round(+e.target.value / 2.20462 * 10) / 10 : e.target.value;
+                      updateSet(ei, si, "weight", val);
+                    }}
                     style={{ ...inputStyle, fontSize: 13, padding: "7px 8px", textAlign: "center",
                       background: st.done ? T.accentSoft : T.bgInput,
                       border: st.done ? `1px solid ${T.accent}40` : "none" }} />
