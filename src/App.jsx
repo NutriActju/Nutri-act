@@ -2284,23 +2284,35 @@ const [editSessionForm, setEditSessionForm] = useState(null);
             <div key={i} style={{ background: T.bgCard, borderRadius: R.lg, boxShadow: shadow.sm, padding: 16, marginBottom: 10 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}
                 onClick={() => setExpandedSession(expandedSession === i ? null : i)}>
-                <div>
-                  <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: T.primary, fontFamily: F.text }}>💪 {a.progName}</p>
+                <div style={{ flex: 1 }}>
+                  <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: T.primary, fontFamily: F.text }}>💪 {a.progName} {expandedSession === i ? "▲" : "▼"}</p>
                   <p style={{ margin: "2px 0 0", fontSize: 12, color: T.tertiary, fontFamily: F.text }}>
                     {new Date(a.date).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "short" })}
+                    {" · "}<span style={{ color: T.blue, fontWeight: 700 }}>{Math.round(totalCharge)}kg</span>
                   </p>
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <div style={{ background: T.bgInput, borderRadius: 99, padding: "4px 12px" }}>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: T.blue, fontFamily: F.display }}>{Math.round(totalCharge)} kg</span>
-                  </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }} onClick={e => e.stopPropagation()}>
                   <button onClick={(e) => { e.stopPropagation(); setEditSession(i); setEditSessionForm(JSON.parse(JSON.stringify(a))); }}
                     style={{ background: "none", border: "none", cursor: "pointer", padding: 4 }}>
                     <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
                       <path d="M11.013 1.427a1.75 1.75 0 012.474 2.474L4.62 12.768l-3.537.393.393-3.537 8.537-8.197z" stroke={T.blue} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                     </svg>
                   </button>
-                  <span style={{ fontSize: 16, color: T.tertiary }}>{expandedSession === i ? "▲" : "▼"}</span>
+                  <button onClick={async (e) => {
+                    e.stopPropagation();
+                    const key = a.progId;
+                    setWorkoutSessions(prev => {
+                      const updated = (prev[key] || []).filter(s => s.id !== a.id);
+                      return { ...prev, [key]: updated };
+                    });
+                    if (user && a.id) {
+                      await supabase.from("workout_sessions").delete().eq("id", a.id);
+                    }
+                  }} style={{ background: T.redSoft, border: "none", borderRadius: 99, width: 28, height: 28, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                      <path d="M2 4h12M5 4V2h6v2M6 7v5M10 7v5M3 4l1 9a1 1 0 001 1h6a1 1 0 001-1l1-9" stroke={T.red} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </button>
                 </div>
               </div>
               {expandedSession === i && (
