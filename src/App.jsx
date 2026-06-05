@@ -1436,7 +1436,6 @@ function WorkoutProgram({ user, programs, setPrograms, sessions, setSessions }) 
   const [currentSession, setCurrentSession] = useState(null); // séance en cours
   const [restTimer, setRestTimer] = useState(null);
   const [restLeft, setRestLeft] = useState(0);
-  const [weightUnit, setWeightUnit] = useState("kg");
   const timerRef = useRef(null);
 
   // Timer de repos
@@ -1717,19 +1716,7 @@ const finishSession = async () => {
           <p style={{ margin: 0, fontSize: 13, color: T.tertiary, fontFamily: F.text }}>Seance en cours</p>
           <p style={{ margin: "2px 0 0", fontSize: 20, fontWeight: 800, color: T.primary, fontFamily: F.display }}>{currentSession.progName}</p>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div style={{ display: "flex", background: T.bgInput, borderRadius: R.sm, padding: 2, gap: 2 }}>
-            {["kg", "lbs"].map(u => (
-              <button key={u} onClick={() => setWeightUnit(u)}
-                style={{ padding: "5px 10px", borderRadius: R.sm, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 700, fontFamily: F.text,
-                  background: weightUnit === u ? T.blue : "transparent",
-                  color: weightUnit === u ? "#fff" : T.tertiary }}>
-                {u}
-              </button>
-            ))}
-          </div>
-          <button onClick={finishSession} style={{ ...btnPrimary(T.accent), padding: "9px 16px", fontSize: 13 }}>Terminer ✓</button>
-        </div>
+        <button onClick={finishSession} style={{ ...btnPrimary(T.accent), padding: "9px 16px", fontSize: 13 }}>Terminer ✓</button>
       </div>
 
       {/* Timer repos */}
@@ -1750,8 +1737,8 @@ const finishSession = async () => {
             <p style={{ margin: "0 0 12px", fontSize: 11, color: T.quaternary, fontFamily: F.text }}>Repos prevu : {exo.rest}s</p>
 
             {/* En-tete colonnes */}
-            <div style={{ display: "grid", gridTemplateColumns: "32px 1fr 1fr 1fr 65px", gap: 6, marginBottom: 6 }}>
-              {["Serie", "Reps", "Poids (kg)", "Precedent", ""].map((h, i) => (
+            <div style={{ display: "grid", gridTemplateColumns: "28px 1fr 1fr 1fr 1fr 56px", gap: 4, marginBottom: 6 }}>
+              {["S", "Reps", "kg", "lbs", "Préc.", ""].map((h, i) => (
                 <span key={i} style={{ fontSize: 10, color: T.quaternary, fontFamily: F.text, fontWeight: 600 }}>{h}</span>
               ))}
             </div>
@@ -1759,21 +1746,29 @@ const finishSession = async () => {
             {exo.done.map((st, si) => {
               const prev = lastRecord?.[si];
               return (
-                <div key={si} onClick={() => console.log("si:", si, "plannedSets:", exo.plannedSets)} style={{ display: "grid", gridTemplateColumns: "32px 1fr 1fr 1fr 65px", gap: 6, marginBottom: 8, alignItems: "center", background: si >= exo.plannedSets ? T.redSoft : "transparent", borderRadius: R.sm, padding: si >= exo.plannedSets ? "4px" : 0 }}>
+                <div key={si} style={{ display: "grid", gridTemplateColumns: "28px 1fr 1fr 1fr 1fr 56px", gap: 6, marginBottom: 8, alignItems: "center", background: si >= exo.plannedSets ? T.redSoft : "transparent", borderRadius: R.sm, padding: si >= exo.plannedSets ? "4px" : 0 }}>
                   <span style={{ fontSize: 13, fontWeight: 700, color: st.done ? T.accent : T.tertiary, fontFamily: F.display }}>S{si + 1}</span>
                   <input type="number" value={st.reps || ""} onChange={e => updateSet(ei, si, "reps", e.target.value === "" ? "" : +e.target.value)}
                     style={{ ...inputStyle, fontSize: 13, padding: "7px 8px", textAlign: "center",
                       background: st.done ? T.accentSoft : T.bgInput,
                       border: st.done ? `1px solid ${T.accent}40` : "none" }} />
-                  <input type="number" step="0.5" placeholder={weightUnit}
-                    value={st.weight === "" || st.weight === undefined ? "" : weightUnit === "lbs" ? Math.round(+st.weight * 2.20462 * 10) / 10 : st.weight}
+                  <input type="number" step="0.5" placeholder="kg"
+                    value={st.weight || ""}
                     onChange={e => {
-                      const val = e.target.value === "" ? "" : weightUnit === "lbs" ? Math.round(+e.target.value / 2.20462 * 10) / 10 : e.target.value;
-                      updateSet(ei, si, "weight", val);
+                      updateSet(ei, si, "weight", e.target.value === "" ? "" : e.target.value);
                     }}
-                    style={{ ...inputStyle, fontSize: 13, padding: "7px 8px", textAlign: "center",
+                    style={{ ...inputStyle, fontSize: 13, padding: "7px 6px", textAlign: "center",
                       background: st.done ? T.accentSoft : T.bgInput,
                       border: st.done ? `1px solid ${T.accent}40` : "none" }} />
+                  <input type="number" step="0.5" placeholder="lbs"
+                    value={st.weight === "" || st.weight === undefined ? "" : Math.round(+st.weight * 2.20462 * 10) / 10}
+                    onChange={e => {
+                      const kg = e.target.value === "" ? "" : Math.round(+e.target.value / 2.20462 * 10) / 10;
+                      updateSet(ei, si, "weight", kg);
+                    }}
+                    style={{ ...inputStyle, fontSize: 13, padding: "7px 6px", textAlign: "center",
+                      background: st.done ? "#FFF3E0" : T.bgInput,
+                      border: st.done ? `1px solid ${T.orange}40` : "none" }} />
                   <span style={{ fontSize: 11, color: T.quaternary, fontFamily: F.text, textAlign: "center" }}>
                     {prev ? `${prev.reps}r × ${prev.weight || "-"}kg` : "-"}
                   </span>
