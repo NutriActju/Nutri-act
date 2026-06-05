@@ -2051,7 +2051,7 @@ const [editSessionForm, setEditSessionForm] = useState(null);
             <div style={{ padding: "16px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, background: T.bgCard, borderBottom: `1px solid ${T.sep}` }}>
               <div>
                 <span style={{ fontSize: 17, fontWeight: 700, color: T.primary, fontFamily: F.text }}>Modifier la séance</span>
-                <p style={{ margin: "2px 0 0", fontSize: 12, color: T.tertiary, fontFamily: F.text }}>{editSessionForm.progName} — {new Date(editSessionForm.date).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "short" })}</p>
+                <p style={{ margin: "2px 0 0", fontSize: 12, color: T.tertiary, fontFamily: F.text }}>{editSessionForm.progName}</p>
               </div>
               <button onClick={() => setEditSession(null)} style={{ background: T.bgInput, border: "none", borderRadius: 99, width: 28, height: 28, fontSize: 16, color: T.tertiary, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
             </div>
@@ -2059,43 +2059,23 @@ const [editSessionForm, setEditSessionForm] = useState(null);
               {editSessionForm.sets.map((exo, ei) => (
                 <div key={ei} style={{ background: T.bgCard, borderRadius: R.lg, boxShadow: shadow.sm, padding: 14, marginBottom: 12, border: `1px solid ${T.sep}` }}>
                   <p style={{ margin: "0 0 10px", fontSize: 14, fontWeight: 700, color: T.secondary, fontFamily: F.text }}>{exo.exoName}</p>
-                  <div style={{ display: "grid", gridTemplateColumns: "32px 1fr 1fr", gap: 6, marginBottom: 6 }}>
-                    <span style={{ fontSize: 10, color: T.quaternary, fontFamily: F.text, fontWeight: 600 }}>Série</span>
-                    <span style={{ fontSize: 10, color: T.quaternary, fontFamily: F.text, fontWeight: 600 }}>Reps</span>
-                    <span style={{ fontSize: 10, color: T.quaternary, fontFamily: F.text, fontWeight: 600 }}>Poids (kg)</span>
-                  </div>
                   {exo.done.filter(st => st.done).map((st, si) => (
                     <div key={si} style={{ display: "grid", gridTemplateColumns: "32px 1fr 1fr", gap: 6, marginBottom: 8, alignItems: "center" }}>
                       <span style={{ fontSize: 13, fontWeight: 700, color: T.accent, fontFamily: F.display }}>S{si + 1}</span>
-                      <input type="number" value={st.reps || ""}
-                        onChange={e => {
-                          const val = e.target.value === "" ? "" : +e.target.value;
-                          setEditSessionForm(f => {
-                            const sets = f.sets.map((ex, i) => i === ei
-                              ? { ...ex, done: ex.done.filter(s => s.done).map((s, j) => j === si ? { ...s, reps: val } : s).concat(ex.done.filter(s => !s.done)) }
-                              : ex);
-                            return { ...f, sets };
-                          });
-                        }}
-                        style={{ ...inputStyle, fontSize: 14, padding: "8px 10px", textAlign: "center" }} />
-                      <input type="number" step="0.5" value={st.weight || ""}
-                        onChange={e => {
-                          const val = e.target.value;
-                          setEditSessionForm(f => {
-                            const sets = f.sets.map((ex, i) => i === ei
-                              ? { ...ex, done: ex.done.filter(s => s.done).map((s, j) => j === si ? { ...s, weight: val } : s).concat(ex.done.filter(s => !s.done)) }
-                              : ex);
-                            return { ...f, sets };
-                          });
-                        }}
-                        style={{ ...inputStyle, fontSize: 14, padding: "8px 10px", textAlign: "center" }} />
+                      <input type="number" value={st.reps || ""} onChange={e => {
+                        const newSets = editSessionForm.sets.map((ex, i) => i === ei ? { ...ex, done: ex.done.map((s, j) => j === si ? { ...s, reps: e.target.value === "" ? "" : +e.target.value } : s) } : ex);
+                        setEditSessionForm(f => ({ ...f, sets: newSets }));
+                      }} style={{ ...inputStyle, fontSize: 14, padding: "8px 10px", textAlign: "center" }} />
+                      <input type="number" step="0.5" value={st.weight || ""} onChange={e => {
+                        const newSets = editSessionForm.sets.map((ex, i) => i === ei ? { ...ex, done: ex.done.map((s, j) => j === si ? { ...s, weight: e.target.value } : s) } : ex);
+                        setEditSessionForm(f => ({ ...f, sets: newSets }));
+                      }} style={{ ...inputStyle, fontSize: 14, padding: "8px 10px", textAlign: "center" }} />
                     </div>
                   ))}
                 </div>
               ))}
               <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-                <button onClick={() => setEditSession(null)}
-                  style={{ flex: 1, background: T.bgInput, border: "none", borderRadius: R.md, padding: "13px", fontFamily: F.text, fontSize: 15, fontWeight: 600, color: T.tertiary, cursor: "pointer" }}>
+                <button onClick={() => setEditSession(null)} style={{ flex: 1, background: T.bgInput, border: "none", borderRadius: R.md, padding: "13px", fontFamily: F.text, fontSize: 15, fontWeight: 600, color: T.tertiary, cursor: "pointer" }}>
                   Annuler
                 </button>
                 <button onClick={async () => {
@@ -2110,8 +2090,7 @@ const [editSessionForm, setEditSessionForm] = useState(null);
                     await supabase.from("workout_sessions").update({ sets: updatedSets }).eq("id", sessionId);
                   }
                   setEditSession(null);
-                }}
-                  style={{ ...btnPrimary(T.accent), flex: 1, padding: "13px" }}>
+                }} style={{ ...btnPrimary(T.accent), flex: 1, padding: "13px" }}>
                   Enregistrer
                 </button>
               </div>
@@ -2119,6 +2098,7 @@ const [editSessionForm, setEditSessionForm] = useState(null);
           </div>
         </div>
       )}
+      {editAct !== null && editActForm && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 400, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
           <div style={{ background: T.bgCard, borderRadius: R.xl, padding: 24, width: "100%", maxWidth: 340, boxShadow: shadow.lg }}>
             <p style={{ margin: "0 0 16px", fontSize: 17, fontWeight: 700, color: T.primary, fontFamily: F.text }}>{editActForm.name}</p>
