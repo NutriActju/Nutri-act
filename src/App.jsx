@@ -2059,17 +2059,17 @@ const [editSessionForm, setEditSessionForm] = useState(null);
               {editSessionForm.sets.map((exo, ei) => (
                 <div key={ei} style={{ background: T.bgCard, borderRadius: R.lg, boxShadow: shadow.sm, padding: 14, marginBottom: 12, border: `1px solid ${T.sep}` }}>
                   <p style={{ margin: "0 0 10px", fontSize: 14, fontWeight: 700, color: T.secondary, fontFamily: F.text }}>{exo.exoName}</p>
-                  {exo.done.filter(st => st.done).map((st, si) => (
+                  {exo.done.map((st, si) => (
                     <div key={si} style={{ display: "grid", gridTemplateColumns: "32px 1fr 1fr", gap: 6, marginBottom: 8, alignItems: "center" }}>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: T.accent, fontFamily: F.display }}>S{si + 1}</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: st.done ? T.accent : T.quaternary, fontFamily: F.display }}>S{si + 1}</span>
                       <input type="number" value={st.reps || ""} onChange={e => {
-                        const newSets = editSessionForm.sets.map((ex, i) => i === ei ? { ...ex, done: ex.done.map((s, j) => j === si ? { ...s, reps: e.target.value === "" ? "" : +e.target.value } : s) } : ex);
+                        const newSets = editSessionForm.sets.map((ex, i) => i === ei ? { ...ex, done: ex.done.map((s, j) => j === si ? { ...s, reps: e.target.value === "" ? "" : +e.target.value, done: true } : s) } : ex);
                         setEditSessionForm(f => ({ ...f, sets: newSets }));
-                      }} style={{ ...inputStyle, fontSize: 14, padding: "8px 10px", textAlign: "center" }} />
+                      }} style={{ ...inputStyle, fontSize: 14, padding: "8px 10px", textAlign: "center", background: st.done ? T.accentSoft : T.bgInput }} />
                       <input type="number" step="0.5" value={st.weight || ""} onChange={e => {
-                        const newSets = editSessionForm.sets.map((ex, i) => i === ei ? { ...ex, done: ex.done.map((s, j) => j === si ? { ...s, weight: e.target.value } : s) } : ex);
+                        const newSets = editSessionForm.sets.map((ex, i) => i === ei ? { ...ex, done: ex.done.map((s, j) => j === si ? { ...s, weight: e.target.value, done: true } : s) } : ex);
                         setEditSessionForm(f => ({ ...f, sets: newSets }));
-                      }} style={{ ...inputStyle, fontSize: 14, padding: "8px 10px", textAlign: "center" }} />
+                      }} style={{ ...inputStyle, fontSize: 14, padding: "8px 10px", textAlign: "center", background: st.done ? T.accentSoft : T.bgInput }} />
                     </div>
                   ))}
                 </div>
