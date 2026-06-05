@@ -1753,18 +1753,21 @@ const finishSession = async () => {
                       background: st.done ? T.accentSoft : T.bgInput,
                       border: st.done ? `1px solid ${T.accent}40` : "none" }} />
                   <input type="number" step="0.5" placeholder="kg"
-                    value={st.weight || ""}
-                    onChange={e => {
-                      updateSet(ei, si, "weight", e.target.value === "" ? "" : e.target.value);
+                    defaultValue={st.weightUnit === "lbs" ? (st.weight ? Math.round(+st.weight / 2.20462 * 10) / 10 : "") : (st.weight || "")}
+                    onBlur={e => {
+                      const val = e.target.value === "" ? "" : e.target.value;
+                      updateSet(ei, si, "weight", val === "" ? "" : Math.round(+val * 2.20462 * 10) / 10);
+                      updateSet(ei, si, "weightUnit", "kg");
                     }}
                     style={{ ...inputStyle, fontSize: 13, padding: "7px 6px", textAlign: "center",
                       background: st.done ? T.accentSoft : T.bgInput,
                       border: st.done ? `1px solid ${T.accent}40` : "none" }} />
                   <input type="number" step="0.5" placeholder="lbs"
-                    value={st.weight === "" || st.weight === undefined ? "" : Math.round(+st.weight * 2.20462 * 10) / 10}
-                    onChange={e => {
-                      const kg = e.target.value === "" ? "" : Math.round(+e.target.value / 2.20462 * 10) / 10;
-                      updateSet(ei, si, "weight", kg);
+                    defaultValue={st.weightUnit === "lbs" ? (st.weight || "") : (st.weight ? Math.round(+st.weight * 2.20462 * 10) / 10 : "")}
+                    onBlur={e => {
+                      const val = e.target.value === "" ? "" : e.target.value;
+                      updateSet(ei, si, "weight", val);
+                      updateSet(ei, si, "weightUnit", "lbs");
                     }}
                     style={{ ...inputStyle, fontSize: 13, padding: "7px 6px", textAlign: "center",
                       background: st.done ? "#FFF3E0" : T.bgInput,
