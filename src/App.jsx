@@ -1756,7 +1756,7 @@ const finishSession = async () => {
                     defaultValue={st.weightUnit === "lbs" ? (st.weight ? Math.round(+st.weight / 2.20462 * 10) / 10 : "") : (st.weight || "")}
                     onBlur={e => {
                       const val = e.target.value === "" ? "" : e.target.value;
-                      updateSet(ei, si, "weight", val === "" ? "" : Math.round(+val * 2.20462 * 10) / 10);
+                      updateSet(ei, si, "weight", val);
                       updateSet(ei, si, "weightUnit", "kg");
                     }}
                     style={{ ...inputStyle, fontSize: 13, padding: "7px 6px", textAlign: "center",
