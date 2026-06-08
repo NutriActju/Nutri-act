@@ -579,6 +579,11 @@ const [recipeSearchResults, setRecipeSearchResults] = useState([]);
 const [recipeQuantityModal, setRecipeQuantityModal] = useState(null);
 const [recipeQuantity, setRecipeQuantity] = useState("100");
 const [scanResult, setScanResult] = useState(null);
+const [aiScanModal, setAiScanModal] = useState(false);
+const [aiScanLoading, setAiScanLoading] = useState(false);
+const [aiScanResults, setAiScanResults] = useState([]);
+const [aiScanMeal, setAiScanMeal] = useState("lunch");
+const [aiScanImage, setAiScanImage] = useState(null);
 const [quantityModal, setQuantityModal] = useState(null);
 const [editFood, setEditFood] = useState(null);
 const [editQuantity, setEditQuantity] = useState("100");
@@ -613,6 +618,58 @@ const [showLiveScanner, setShowLiveScanner] = useState(false);
 const [scannerContext, setScannerContext] = useState("nutrition");
 const savedAddToRef = useRef(null);
 const liveScannerRef = useRef(null);
+const analyzeImageWithAI = async (base64Image) => {
+  setAiScanLoading(true);
+  try {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": import.meta.env.VITE_ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
+        "anthropic-dangerous-direct-browser-access": "true",
+      },
+      body: JSON.stringify({
+        model: "claude-opus-4-5",
+        max_tokens: 1024,
+        messages: [{
+          role: "user",
+          content: [
+            {
+              type: "image",
+              source: { type: "base64", media_type: "image/jpeg", data: base64Image },
+            },
+            {
+              type: "text",
+              text: `Analyse cette photo de repas et liste tous les aliments visibles. Pour chaque aliment, estime le grammage. Réponds UNIQUEMENT en JSON valide, sans texte avant ou après, avec ce format exact:
+{"aliments": [{"nom": "Poulet grillé", "grammes": 150, "kcal": 248, "prot": 46, "gluc": 0, "lip": 5}, ...]}
+Sois précis sur les estimations de grammage en fonction de ce que tu vois dans l'assiette.`
+            }
+          ]
+        }]
+      })
+    });
+    const data = await response.json();
+    const text = data.content[0].text;
+    const clean = text.replace(/```json|```/g, "").trim();
+    const parsed = JSON.parse(clean);
+    setAiScanResults(parsed.aliments.map(a => ({ ...a, selected: true })));
+  } catch (e) {
+    alert("Erreur lors de l'analyse. Vérifie ta clé API.");
+    console.error(e);
+  }
+  setAiScanLoading(false);
+};
+
+const handleAiScanFile = (file) => {
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    const base64 = ev.target.result.split(",")[1];
+    setAiScanImage(ev.target.result);
+    analyzeImageWithAI(base64);
+  };
+  reader.readAsDataURL(file);
+};
 const startBarcodeScanner = async () => {
   setShowLiveScanner(true);
   setTimeout(() => { initLiveScanner("live-scanner"); }, 300);
@@ -782,6 +839,10 @@ setLogs(newLogs);
         </div>
         </div>
 
+      <button onClick={() => setAiScanModal(true)}
+        style={{ ...btnPrimary(T.blue), margin: "12px 16px 0", width: "calc(100% - 32px)", padding: "13px", fontSize: 15, display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
+        <span style={{ fontSize: 20 }}>🍽️</span> Scanner mon repas
+      </button>
       <div style={{ ...card(), marginTop: 16, padding: 20 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
           <ArcRing value={tK} max={target} color={tK > target ? T.red : g.col} size={100} stroke={6}>
@@ -901,6 +962,98 @@ setLogs(newLogs);
         </div>
       </div>
 <div id="reader" style={{ display: "none" }}></div>
+{aiScanModal && (
+  <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 400, display: "flex", alignItems: "flex-end", backdropFilter: "blur(4px)" }}>
+    <div style={{ background: T.bgCard, borderRadius: `${R.xl}px ${R.xl}px 0 0`, padding: "0 0 40px", width: "100%", maxWidth: 430, margin: "0 auto", maxHeight: "90vh", overflowY: "auto", boxShadow: "0 -8px 40px rgba(0,0,0,0.12)" }}>
+      <div style={{ padding: "16px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, background: T.bgCard, borderBottom: `1px solid ${T.sep}` }}>
+        <span style={{ fontSize: 17, fontWeight: 700, color: T.primary, fontFamily: F.text }}>🍽️ Scanner mon repas</span>
+        <button onClick={() => { setAiScanModal(false); setAiScanResults([]); setAiScanImage(null); }}
+          style={{ background: T.bgInput, border: "none", borderRadius: 99, width: 28, height: 28, fontSize: 16, color: T.tertiary, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
+      </div>
+      <div style={{ padding: "16px 20px" }}>
+        {!aiScanImage && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <label style={{ ...btnPrimary(T.blue), padding: "13px", fontSize: 15, display: "flex", alignItems: "center", justifyContent: "center", gap: 10, cursor: "pointer", borderRadius: R.md, textAlign: "center" }}>
+              <span>📷</span> Prendre une photo
+              <input type="file" accept="image/*" capture="environment" style={{ display: "none" }}
+                onChange={e => e.target.files[0] && handleAiScanFile(e.target.files[0])} />
+            </label>
+            <label style={{ ...btnPrimary(T.tertiary), padding: "13px", fontSize: 15, display: "flex", alignItems: "center", justifyContent: "center", gap: 10, cursor: "pointer", borderRadius: R.md, textAlign: "center" }}>
+              <span>🖼️</span> Choisir une photo
+              <input type="file" accept="image/*" style={{ display: "none" }}
+                onChange={e => e.target.files[0] && handleAiScanFile(e.target.files[0])} />
+            </label>
+          </div>
+        )}
+        {aiScanImage && (
+          <img src={aiScanImage} alt="repas" style={{ width: "100%", borderRadius: R.lg, marginBottom: 16, maxHeight: 200, objectFit: "cover" }} />
+        )}
+        {aiScanLoading && (
+          <div style={{ textAlign: "center", padding: 32 }}>
+            <p style={{ fontSize: 24, marginBottom: 8 }}>🔍</p>
+            <p style={{ fontSize: 14, color: T.tertiary, fontFamily: F.text }}>Analyse de ton repas en cours...</p>
+          </div>
+        )}
+        {aiScanResults.length > 0 && (
+          <div>
+            <p style={{ ...labelStyle, marginBottom: 10 }}>Aliments détectés — modifie si besoin</p>
+            {aiScanResults.map((food, i) => (
+              <div key={i} style={{ background: food.selected ? T.accentSoft : T.bgInput, borderRadius: R.md, padding: "10px 12px", marginBottom: 8, border: `1px solid ${food.selected ? T.accent : "transparent"}` }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                  <input value={food.nom} onChange={e => setAiScanResults(r => r.map((x, xi) => xi === i ? { ...x, nom: e.target.value } : x))}
+                    style={{ ...inputStyle, fontSize: 13, padding: "4px 8px", flex: 1, marginRight: 8 }} />
+                  <button onClick={() => setAiScanResults(r => r.map((x, xi) => xi === i ? { ...x, selected: !x.selected } : x))}
+                    style={{ background: food.selected ? T.accent : T.bgInput, border: "none", borderRadius: 99, width: 24, height: 24, cursor: "pointer", color: food.selected ? "#fff" : T.quaternary, fontSize: 12, flexShrink: 0 }}>
+                    {food.selected ? "✓" : "○"}
+                  </button>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr 1fr", gap: 6 }}>
+                  {[["g", "grammes"], ["kcal", "kcal"], ["P", "prot"], ["G", "gluc"], ["L", "lip"]].map(([lbl, key]) => (
+                    <div key={key}>
+                      <label style={{ fontSize: 9, color: T.quaternary, fontFamily: F.text, display: "block", marginBottom: 2 }}>{lbl}</label>
+                      <input type="number" value={food[key] || ""}
+                        onChange={e => setAiScanResults(r => r.map((x, xi) => xi === i ? { ...x, [key]: +e.target.value } : x))}
+                        style={{ ...inputStyle, fontSize: 11, padding: "4px 6px", textAlign: "center" }} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+            <button onClick={() => setAiScanResults(r => [...r, { nom: "", grammes: 0, kcal: 0, prot: 0, gluc: 0, lip: 0, selected: true }])}
+              style={{ ...btnGhost, width: "100%", marginBottom: 12, textAlign: "center" }}>+ Ajouter un aliment manquant</button>
+            <p style={{ ...labelStyle, marginBottom: 8 }}>Ajouter à quel repas ?</p>
+            <div style={{ display: "flex", background: T.bgInput, borderRadius: R.sm, padding: 3, gap: 3, marginBottom: 14, flexWrap: "wrap" }}>
+              {MEAL_KEYS.map((key, i) => (
+                <button key={key} onClick={() => setAiScanMeal(key)}
+                  style={{ ...pill(aiScanMeal === key, T.accent), flex: 1, padding: "7px 0", fontSize: 11, minWidth: 60 }}>
+                  {MEAL_ICONS[i]}
+                </button>
+              ))}
+            </div>
+            <button onClick={() => {
+              const selected = aiScanResults.filter(f => f.selected);
+              const d = logs[selDate] || { meals: {}, water: 0 };
+              const newFoods = selected.map(f => ({
+                name: `${f.nom} ${f.grammes}g`,
+                prot: f.prot,
+                gluc: f.gluc,
+                lip: f.lip,
+                kcal: f.kcal,
+              }));
+              const newLogs = { ...logs, [selDate]: { ...d, meals: { ...d.meals, [aiScanMeal]: [...(d.meals[aiScanMeal] || []), ...newFoods] } } };
+              setLogs(newLogs);
+              setAiScanModal(false);
+              setAiScanResults([]);
+              setAiScanImage(null);
+            }} style={{ ...btnPrimary(T.accent), width: "100%", padding: "13px", fontSize: 15 }}>
+              Ajouter au repas
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  </div>
+)}
 {editFood && (
   <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 400, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
     <div style={{ background: T.bgCard, borderRadius: R.xl, padding: 24, width: "100%", maxWidth: 340, boxShadow: shadow.lg }}>
@@ -1766,7 +1919,8 @@ const finishSession = async () => {
                     defaultValue={st.weightUnit === "lbs" ? (st.weight || "") : (st.weight ? Math.round(+st.weight * 2.20462 * 10) / 10 : "")}
                     onBlur={e => {
                       const val = e.target.value === "" ? "" : e.target.value;
-                      updateSet(ei, si, "weight", val);
+                      const kg = val === "" ? "" : Math.round(+val / 2.20462 * 10) / 10;
+                      updateSet(ei, si, "weight", kg);
                       updateSet(ei, si, "weightUnit", "lbs");
                     }}
                     style={{ ...inputStyle, fontSize: 13, padding: "7px 6px", textAlign: "center",
