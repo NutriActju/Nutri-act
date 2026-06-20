@@ -3102,11 +3102,17 @@ function AuthScreen({ onAuth }) {
         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         onAuth(data.user);
-      } else {
+      } else if (mode === "signup") {
         const { data, error } = await supabase.auth.signUp({ email, password });
         if (error) throw error;
         setSuccess("Compte cree ! Verifie ton email pour confirmer puis connecte-toi.");
         setMode("login");
+      } else if (mode === "reset") {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: window.location.origin,
+        });
+        if (error) throw error;
+        setSuccess("Email envoye ! Verifie ta boite mail pour reinitialiser ton mot de passe.");
       }
     } catch (e) {
       setError(e.message || "Une erreur est survenue");
@@ -3138,10 +3144,106 @@ function AuthScreen({ onAuth }) {
             <input type="email" placeholder="ton@email.com" value={email} onChange={e => setEmail(e.target.value)}
               style={inputStyle} />
           </div>
+          {mode !== "reset" && (
           <div style={{ marginBottom: 20 }}>
             <label style={{ fontSize: 12, color: T.tertiary, fontFamily: F.text, display: "block", marginBottom: 4 }}>Mot de passe</label>
             <div style={{ position: "relative" }}>
               <input type={showPassword ? "text" : "password"} placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)}
+                style={{ ...inputStyle, paddingRight: 40 }} />
+              <button type="button" onClick={() => setShowPassword(!showPassword)}
+                style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", padding: 4, display: "flex", alignItems: "center" }}>
+                {showPassword ? (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={T.tertiary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24" />
+                    <line x1="1" y1="1" x2="23" y2="23" />
+                  </svg>
+                ) : (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={T.tertiary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                    <circle cx="12" cy="12" r="3" />
+                  </svg>
+                )}
+              </button>
+            </div>
+          </div>
+          )}
+
+          {mode === "login" && (
+            <div style={{ textAlign: "right", marginBottom: 14, marginTop: -6 }}>
+              <button type="button" onClick={() => { setMode("reset"); setError(""); setSuccess(""); }}
+                style={{ background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: 12.5, color: T.accent, fontFamily: F.text }}>
+                Mot de passe oublié ?
+              </button>
+            </div>
+          )}
+
+          {error && (
+            <div style={{ background: T.redSoft, borderRadius: R.sm, padding: "10px 12px", marginBottom: 14 }}>
+              <p style={{ margin: 0, fontSize: 13, color: T.red, fontFamily: F.text }}>{error}</p>
+            </div>
+          )}
+          {success && (
+            <div style={{ background: T.accentSoft, borderRadius: R.sm, padding: "10px 12px", marginBottom: 14 }}>
+              <p style={{ margin: 0, fontSize: 13, color: T.accent, fontFamily: F.text }}>{success}</p>
+            </div>
+          )}
+
+          <button style={{ ...btnPrimary(), width: "100%", padding: "13px", fontSize: 16, opacity: loading ? 0.7 : 1 }}
+            onClick={handle} disabled={loading}>
+            {loading ? "Chargement..." : mode === "login" ? "Se connecter" : mode === "signup" ? "Creer mon compte" : "Envoyer le lien"}
+          </button>
+
+          {mode === "reset" && (
+            <div style={{ textAlign: "center", marginTop: 14 }}>
+              <button type="button" onClick={() => { setMode("login"); setError(""); setSuccess(""); }}
+                style={{ background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: 13, color: T.tertiary, fontFamily: F.text }}>
+                ← Retour à la connexion
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function NewPasswordScreen({ onDone }) {
+  const [newPassword, setNewPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleUpdate = async () => {
+    setError(""); setLoading(true);
+    try {
+      if (newPassword.length < 6) {
+        setError("Le mot de passe doit contenir au moins 6 caracteres");
+        setLoading(false);
+        return;
+      }
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+      onDone();
+    } catch (e) {
+      setError(e.message || "Une erreur est survenue");
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div style={{ minHeight: "100vh", background: T.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+      <div style={{ width: "100%", maxWidth: 380 }}>
+        <div style={{ textAlign: "center", marginBottom: 32 }}>
+          <div style={{ fontSize: 48, marginBottom: 12 }}>🔒</div>
+          <h1 style={{ margin: 0, fontSize: 24, fontWeight: 800, color: T.primary, fontFamily: F.display }}>Nouveau mot de passe</h1>
+          <p style={{ margin: "6px 0 0", fontSize: 14, color: T.tertiary, fontFamily: F.text }}>Choisis un nouveau mot de passe</p>
+        </div>
+
+        <div style={{ background: T.bgCard, borderRadius: R.xl, padding: 24, boxShadow: shadow.lg }}>
+          <div style={{ marginBottom: 20 }}>
+            <label style={{ fontSize: 12, color: T.tertiary, fontFamily: F.text, display: "block", marginBottom: 4 }}>Nouveau mot de passe</label>
+            <div style={{ position: "relative" }}>
+              <input type={showPassword ? "text" : "password"} placeholder="••••••••" value={newPassword} onChange={e => setNewPassword(e.target.value)}
                 style={{ ...inputStyle, paddingRight: 40 }} />
               <button type="button" onClick={() => setShowPassword(!showPassword)}
                 style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", padding: 4, display: "flex", alignItems: "center" }}>
@@ -3165,22 +3267,16 @@ function AuthScreen({ onAuth }) {
               <p style={{ margin: 0, fontSize: 13, color: T.red, fontFamily: F.text }}>{error}</p>
             </div>
           )}
-          {success && (
-            <div style={{ background: T.accentSoft, borderRadius: R.sm, padding: "10px 12px", marginBottom: 14 }}>
-              <p style={{ margin: 0, fontSize: 13, color: T.accent, fontFamily: F.text }}>{success}</p>
-            </div>
-          )}
 
           <button style={{ ...btnPrimary(), width: "100%", padding: "13px", fontSize: 16, opacity: loading ? 0.7 : 1 }}
-            onClick={handle} disabled={loading}>
-            {loading ? "Chargement..." : mode === "login" ? "Se connecter" : "Creer mon compte"}
+            onClick={handleUpdate} disabled={loading}>
+            {loading ? "Chargement..." : "Valider le nouveau mot de passe"}
           </button>
         </div>
       </div>
     </div>
   );
 }
-
 export default function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -3196,12 +3292,16 @@ export default function App() {
   const [bodyLogs, setBodyLogs] = useState({});
 
   // Verifier si l'utilisateur est deja connecte
+  const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       setLoading(false);
     });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY") {
+        setIsPasswordRecovery(true);
+      }
       setUser(session?.user ?? null);
     });
     return () => subscription.unsubscribe();
@@ -3381,6 +3481,8 @@ const saveLogsToSupabase = async (logsData) => {
       </div>
     </div>
   );
+
+  if (isPasswordRecovery) return <NewPasswordScreen onDone={() => setIsPasswordRecovery(false)} />;
 
   if (!user) return <AuthScreen onAuth={setUser} />;
 
