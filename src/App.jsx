@@ -1877,6 +1877,20 @@ const finishSession = async () => {
   // ── Vue : séance active ──
   if (view === "active_session" && currentSession) return (
     <div style={{ margin: "0 16px 12px" }}>
+      {restTimer !== null && (
+        <div style={{ position: "fixed", bottom: 80, left: "50%", transform: "translateX(-50%)", zIndex: 300, background: restLeft > 0 ? T.primary : T.accent, borderRadius: 99, padding: "10px 20px", boxShadow: shadow.lg, display: "flex", alignItems: "center", gap: 12, maxWidth: 430, width: "calc(100% - 64px)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1 }}>
+            <span style={{ fontSize: 18 }}>{restLeft > 0 ? "⏱️" : "✅"}</span>
+            <span style={{ fontSize: 18, fontWeight: 800, color: "#fff", fontFamily: F.display }}>
+              {restLeft > 0 ? `${restLeft}s` : "C'est parti !"}
+            </span>
+          </div>
+          <button onClick={() => { clearInterval(timerRef.current); setRestTimer(null); }}
+            style={{ background: "rgba(255,255,255,0.2)", border: "none", borderRadius: 99, padding: "6px 12px", color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: F.text }}>
+            Passer
+          </button>
+        </div>
+      )}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
         <div>
           <p style={{ margin: 0, fontSize: 13, color: T.tertiary, fontFamily: F.text }}>Seance en cours</p>
@@ -1885,15 +1899,6 @@ const finishSession = async () => {
         <button onClick={finishSession} style={{ ...btnPrimary(T.accent), padding: "9px 16px", fontSize: 13 }}>Terminer ✓</button>
       </div>
 
-      {/* Timer repos */}
-      {restTimer !== null && (
-        <div style={{ ...card(), padding: 14, marginBottom: 0, background: restLeft > 0 ? T.bgCard : T.accentSoft, textAlign: "center" }}>
-          <p style={{ margin: 0, fontSize: 12, color: T.tertiary, fontFamily: F.text }}>Temps de repos</p>
-          <p style={{ margin: "4px 0 0", fontSize: 36, fontWeight: 800, color: restLeft > 0 ? T.orange : T.accent, fontFamily: F.display }}>
-            {restLeft > 0 ? `${restLeft}s` : "C'est parti !"}
-          </p>
-        </div>
-      )}
 
       {currentSession.sets.map((exo, ei) => {
         const lastRecord = getLastRecord(currentSession.progId, exo.exoName);
