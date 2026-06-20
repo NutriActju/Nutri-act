@@ -618,8 +618,9 @@ const [showLiveScanner, setShowLiveScanner] = useState(false);
 const [scannerContext, setScannerContext] = useState("nutrition");
 const savedAddToRef = useRef(null);
 const liveScannerRef = useRef(null);
-const analyzeImageWithAI = async (base64Image) => {
+const analyzeImageWithAI = async (base64Image, mediaType = "image/jpeg") => {
   setAiScanLoading(true);
+  console.log("API KEY:", import.meta.env.VITE_ANTHROPIC_API_KEY);
   try {
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -630,14 +631,14 @@ const analyzeImageWithAI = async (base64Image) => {
         "anthropic-dangerous-direct-browser-access": "true",
       },
       body: JSON.stringify({
-        model: "claude-opus-4-5",
+        model: "claude-sonnet-4-5",
         max_tokens: 1024,
         messages: [{
           role: "user",
           content: [
             {
               type: "image",
-              source: { type: "base64", media_type: "image/jpeg", data: base64Image },
+              source: { type: "base64", media_type: mediaType, data: base64Image },
             },
             {
               type: "text",
@@ -649,6 +650,11 @@ Sois précis sur les estimations de grammage en fonction de ce que tu vois dans 
         }]
       })
     });
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error("Erreur API détail:", errText);
+      throw new Error(errText);
+    }
     const data = await response.json();
     const text = data.content[0].text;
     const clean = text.replace(/```json|```/g, "").trim();
@@ -662,13 +668,20 @@ Sois précis sur les estimations de grammage en fonction de ce que tu vois dans 
 };
 
 const handleAiScanFile = (file) => {
-  const reader = new FileReader();
-  reader.onload = (ev) => {
-    const base64 = ev.target.result.split(",")[1];
-    setAiScanImage(ev.target.result);
-    analyzeImageWithAI(base64);
+  const img = new Image();
+  const objectUrl = URL.createObjectURL(file);
+  img.onload = () => {
+    const canvas = document.createElement("canvas");
+    canvas.width = img.width;
+    canvas.height = img.height;
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(img, 0, 0);
+    const jpegBase64 = canvas.toDataURL("image/jpeg", 0.85).split(",")[1];
+    setAiScanImage(canvas.toDataURL("image/jpeg", 0.85));
+    analyzeImageWithAI(jpegBase64, "image/jpeg");
+    URL.revokeObjectURL(objectUrl);
   };
-  reader.readAsDataURL(file);
+  img.src = objectUrl;
 };
 const startBarcodeScanner = async () => {
   setShowLiveScanner(true);
@@ -1906,22 +1919,20 @@ const finishSession = async () => {
                       background: st.done ? T.accentSoft : T.bgInput,
                       border: st.done ? `1px solid ${T.accent}40` : "none" }} />
                   <input type="number" step="0.5" placeholder="kg"
-                    defaultValue={st.weightUnit === "lbs" ? (st.weight ? Math.round(+st.weight / 2.20462 * 10) / 10 : "") : (st.weight || "")}
-                    onBlur={e => {
-                      const val = e.target.value === "" ? "" : e.target.value;
-                      updateSet(ei, si, "weight", val);
-                      updateSet(ei, si, "weightUnit", "kg");
+                    value={st.weight === "" || st.weight === undefined || st.weight === null ? "" : Math.round(+st.weight * 10) / 10}
+                    onChange={e => {
+                      const val = e.target.value;
+                      updateSet(ei, si, "weight", val === "" ? "" : +val);
                     }}
                     style={{ ...inputStyle, fontSize: 13, padding: "7px 6px", textAlign: "center",
                       background: st.done ? T.accentSoft : T.bgInput,
                       border: st.done ? `1px solid ${T.accent}40` : "none" }} />
                   <input type="number" step="0.5" placeholder="lbs"
-                    defaultValue={st.weightUnit === "lbs" ? (st.weight || "") : (st.weight ? Math.round(+st.weight * 2.20462 * 10) / 10 : "")}
-                    onBlur={e => {
-                      const val = e.target.value === "" ? "" : e.target.value;
-                      const kg = val === "" ? "" : Math.round(+val / 2.20462 * 10) / 10;
+                    value={st.weight === "" || st.weight === undefined || st.weight === null ? "" : Math.round(+st.weight * 2.20462 * 10) / 10}
+                    onChange={e => {
+                      const val = e.target.value;
+                      const kg = val === "" ? "" : Math.round(+val / 2.20462 * 100) / 100;
                       updateSet(ei, si, "weight", kg);
-                      updateSet(ei, si, "weightUnit", "lbs");
                     }}
                     style={{ ...inputStyle, fontSize: 13, padding: "7px 6px", textAlign: "center",
                       background: st.done ? "#FFF3E0" : T.bgInput,
